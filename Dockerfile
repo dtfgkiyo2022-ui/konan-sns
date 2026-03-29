@@ -4,6 +4,10 @@ WORKDIR /app
 COPY package.json ./
 RUN npm install
 COPY . .
+
+# デバッグ：コンテナ内のファイル一覧を表示
+RUN echo "=== FILES IN /app ===" && ls -la /app && echo "=== FILES IN /app/src ===" && ls -la /app/src
+
 RUN npm run build
 
 # ---- 配信ステージ ----
