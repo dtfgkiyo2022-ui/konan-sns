@@ -1,15 +1,8 @@
 FROM node:20-alpine AS build
 WORKDIR /app
-
 COPY package.json ./
 RUN npm install
-
 COPY . .
-
-RUN ls -la /app
-RUN ls -la /app/src
-RUN cat /app/index.html | head -5 || echo "index.html NOT FOUND"
-
 RUN npm run build
 
 FROM nginx:alpine
