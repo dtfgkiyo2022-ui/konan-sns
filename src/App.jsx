@@ -1,5 +1,14 @@
 import { useState, useRef, useCallback } from "react";
 
+// Capacitor — ネイティブ環境の場合のみカメラを使用
+let Camera, CameraResultType, CameraSource, Capacitor;
+try {
+  ({ Capacitor } = await import("@capacitor/core"));
+  ({ Camera, CameraResultType, CameraSource } = await import("@capacitor/camera"));
+} catch {
+  Capacitor = { isNativePlatform: () => false };
+}
+
 const ADMIN_CREDENTIALS = { id: "admin", password: "konan2022" };
 const generateId = () => Math.random().toString(36).substr(2, 9);
 const formatTime = (ts) => {
@@ -82,6 +91,22 @@ export default function ClosedSNS() {
   const [dragOver, setDragOver] = useState(false);
   const fileInputRef = useRef(null);
   const isAdmin = currentUser === "admin";
+
+  // Capacitor カメラ撮影
+  const handleCamera = async () => {
+    if (Capacitor?.isNativePlatform?.()) {
+      try {
+        const photo = await Camera.getPhoto({
+          quality: 80, allowEditing: false,
+          resultType: CameraResultType.DataUrl,
+          source: CameraSource.Camera,
+        });
+        setPendingMedia(prev => [...prev, { id: generateId(), type: "image", url: photo.dataUrl, name: "camera.jpg" }]);
+      } catch { /* cancelled */ }
+    } else {
+      fileInputRef.current?.click();
+    }
+  };
 
   const handleLogin = () => {
     setLoginError("");
@@ -202,6 +227,7 @@ export default function ClosedSNS() {
               <div style={{ display:"flex",gap:4 }}>
                 <input ref={fileInputRef} type="file" accept="image/*,video/*" multiple style={{ display:"none" }} onChange={e=>{if(e.target.files)processFiles(e.target.files);e.target.value="";}} />
                 <button onClick={()=>fileInputRef.current?.click()} style={{ display:"flex",alignItems:"center",gap:5,padding:"6px 12px",borderRadius:8,border:"none",cursor:"pointer",background:"rgba(255,255,255,0.06)",color:"rgba(255,255,255,0.55)",fontSize:13 }}>🖼 写真</button>
+                <button onClick={handleCamera} style={{ display:"flex",alignItems:"center",gap:5,padding:"6px 12px",borderRadius:8,border:"none",cursor:"pointer",background:"rgba(255,255,255,0.06)",color:"rgba(255,255,255,0.55)",fontSize:13 }}>📷 撮影</button>
                 <button onClick={()=>{const i=document.createElement("input");i.type="file";i.accept="video/*";i.multiple=true;i.onchange=e=>{if(e.target.files)processFiles(e.target.files);};i.click();}} style={{ display:"flex",alignItems:"center",gap:5,padding:"6px 12px",borderRadius:8,border:"none",cursor:"pointer",background:"rgba(255,255,255,0.06)",color:"rgba(255,255,255,0.55)",fontSize:13 }}>🎬 動画</button>
               </div>
               <button onClick={handlePost} disabled={!canPost} style={{ padding:"8px 20px",borderRadius:10,border:"none",cursor:canPost?"pointer":"default",background:canPost?"linear-gradient(135deg,#667eea,#764ba2)":"rgba(255,255,255,0.06)",color:canPost?"#fff":"rgba(255,255,255,0.3)",fontSize:13,fontWeight:600 }}>投稿する</button>
