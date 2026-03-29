@@ -1,14 +1,5 @@
 import { useState, useRef, useCallback } from "react";
 
-// Capacitor — ネイティブ環境の場合のみカメラを使用
-let Camera, CameraResultType, CameraSource, Capacitor;
-try {
-  ({ Capacitor } = await import("@capacitor/core"));
-  ({ Camera, CameraResultType, CameraSource } = await import("@capacitor/camera"));
-} catch {
-  Capacitor = { isNativePlatform: () => false };
-}
-
 const ADMIN_CREDENTIALS = { id: "admin", password: "konan2022" };
 const generateId = () => Math.random().toString(36).substr(2, 9);
 const formatTime = (ts) => {
@@ -92,20 +83,14 @@ export default function ClosedSNS() {
   const fileInputRef = useRef(null);
   const isAdmin = currentUser === "admin";
 
-  // Capacitor カメラ撮影
-  const handleCamera = async () => {
-    if (Capacitor?.isNativePlatform?.()) {
-      try {
-        const photo = await Camera.getPhoto({
-          quality: 80, allowEditing: false,
-          resultType: CameraResultType.DataUrl,
-          source: CameraSource.Camera,
-        });
-        setPendingMedia(prev => [...prev, { id: generateId(), type: "image", url: photo.dataUrl, name: "camera.jpg" }]);
-      } catch { /* cancelled */ }
-    } else {
-      fileInputRef.current?.click();
-    }
+  // カメラ/写真撮影（Web版はファイル選択にフォールバック）
+  const handleCamera = () => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = "image/*";
+    input.capture = "environment";
+    input.onchange = (e) => { if (e.target.files) processFiles(e.target.files); };
+    input.click();
   };
 
   const handleLogin = () => {
