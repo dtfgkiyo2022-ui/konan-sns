@@ -1,16 +1,17 @@
-# ---- ビルドステージ ----
 FROM node:20-alpine AS build
 WORKDIR /app
+
 COPY package.json ./
 RUN npm install
+
 COPY . .
 
-# デバッグ：コンテナ内のファイル一覧を表示
-RUN echo "=== FILES IN /app ===" && ls -la /app && echo "=== FILES IN /app/src ===" && ls -la /app/src
+RUN ls -la /app
+RUN ls -la /app/src
+RUN cat /app/index.html | head -5 || echo "index.html NOT FOUND"
 
 RUN npm run build
 
-# ---- 配信ステージ ----
 FROM nginx:alpine
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=build /app/dist /usr/share/nginx/html
