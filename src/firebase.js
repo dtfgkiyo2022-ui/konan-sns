@@ -5,12 +5,13 @@ import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
 // ★★★ ここを書き換え ★★★
 const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_AUTH_DOMAIN",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_STORAGE_BUCKET",
-  messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-  appId: "YOUR_APP_ID"
+  apiKey: "AIzaSyCl891l6niWDqnfpBCdaFd7YRWQt45PsT4",
+  authDomain: "konan-sns.firebaseapp.com",
+  projectId: "konan-sns",
+  storageBucket: "konan-sns.firebasestorage.app",
+  messagingSenderId: "440827774262",
+  appId: "1:440827774262:web:61f9fa64b28067efc81f97",
+  measurementId: "G-881QFQC6SC"
 };
 // ★★★ ここまで ★★★
 
