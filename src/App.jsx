@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import {
-  auth, db, storage, login, logout, createUser, uploadFile,
+  auth, db, storage, login, logout, uploadFile,
+  callCreateUser, callDisableUser, callDeleteUser,
   collection, doc, setDoc, getDoc, getDocs, addDoc, deleteDoc, updateDoc,
   onSnapshot, query, orderBy, where, serverTimestamp, limit
 } from "./firebase";
@@ -159,13 +160,18 @@ export default function App() {
     }
   };
 
-  // Upload files to Storage
+  // Upload files to Storage（サイズ・種類チェック付き）
   const uploadMedia = async (files) => {
     const urls = [];
     for (const f of files) {
-      const path = `media/${Date.now()}_${f.name}`;
-      const url = await uploadFile(path, f);
-      urls.push({ url, type: f.type.startsWith("image/") ? "image" : "video" });
+      try {
+        const path = `media/${Date.now()}_${f.name}`;
+        const url = await uploadFile(path, f);
+        urls.push({ url, type: f.type.startsWith("image/") ? "image" : "video" });
+      } catch (e) {
+        alert(e.message);
+        return [];
+      }
     }
     return urls;
   };
@@ -204,36 +210,31 @@ export default function App() {
     await deleteDoc(doc(db, "posts", postId));
   };
 
-  // Admin: Add user
+  // Admin: Add user（Cloud Functions経由 — 安全）
   const handleAddUser = async () => {
     if (!newUserEmail || !newUserPw || !newUserName || !newUserId) {
       setAdminMsg("全ての項目を入力してください"); return;
     }
+    if (newUserPw.length < 6) {
+      setAdminMsg("パスワードは6文字以上にしてください"); return;
+    }
     try {
-      const resp = await fetch("https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=" + auth.app.options.apiKey, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: newUserEmail, password: newUserPw, returnSecureToken: false }),
-      });
-      const data = await resp.json();
-      if (data.error) { setAdminMsg(data.error.message); return; }
-      await setDoc(doc(db, "users", data.localId), {
-        userId: newUserId,
-        displayName: newUserName,
-        email: newUserEmail,
-        role: "user",
-        active: true,
-        createdAt: serverTimestamp(),
-      });
+      await callCreateUser({ email: newUserEmail, password: newUserPw, displayName: newUserName, userId: newUserId });
       setNewUserEmail(""); setNewUserPw(""); setNewUserName(""); setNewUserId("");
       setAdminMsg("ユーザーを追加しました ✓");
       setTimeout(() => setAdminMsg(""), 2000);
-    } catch (e) { setAdminMsg("エラー: " + e.message); }
+    } catch (e) {
+      setAdminMsg("エラー: " + (e.message || "作成に失敗しました"));
+    }
   };
 
-  // Admin: Toggle active
+  // Admin: Toggle active（Cloud Functions経由 — Auth側も無効化）
   const handleToggleActive = async (uid, current) => {
-    await updateDoc(doc(db, "users", uid), { active: !current });
+    try {
+      await callDisableUser({ uid, disable: current });
+    } catch (e) {
+      console.error("Toggle error:", e);
+    }
   };
 
   // Chat: Send message
@@ -276,7 +277,7 @@ export default function App() {
   const processFiles = (files) => setPendingFiles(prev => [...prev, ...Array.from(files).filter(f => f.type.startsWith("image/") || f.type.startsWith("video/"))]);
 
   // Loading
-  if (authUser === undefined) {
+  if (authUser === undefined || (authUser && !userProfile)) {
     return (<div style={{ minHeight:"100vh",background:"linear-gradient(160deg,#0a0a0f,#1a1a2e,#16213e)",display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontFamily:"'Noto Sans JP',sans-serif" }}>
       <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet" />
       <p style={{ opacity:0.5 }}>読み込み中...</p>
